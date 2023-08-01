@@ -1,0 +1,71 @@
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
+
+public class Main extends JavaPlugin implements Listener {
+
+    private FileConfiguration config;
+
+    @Override
+    public void onEnable() {
+        // Chargez la configuration depuis le fichier
+        loadConfiguration();
+
+        // Enregistrez l'événement pour intercepter les commandes
+        getServer().getPluginManager().registerEvents(this, this);
+
+        // Enregistrez la commande "/hub"
+        getCommand("hub").setExecutor(new HubCommandExecutor());
+        // Enregistrez la commande "/sethub"
+        getCommand("sethub").setExecutor(new SetHubCommandExecutor());
+    }
+
+    private void loadConfiguration() {
+        // Créez le fichier config.yml s'il n'existe pas
+        saveDefaultConfig();
+        // Chargez la configuration depuis le fichier
+        reloadConfig();
+        // Obtenez la configuration chargée
+        config = getConfig();
+    }
+
+    @EventHandler
+    public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String message = event.getMessage().toLowerCase();
+
+        // Interceptez les commandes de "leave" d'autres plugins si configurées
+        if (config.contains("commandes-depart")) {
+            List<String> leaveCommands = config.getStringList("commandes-depart");
+            for (String leaveCommand : leaveCommands) {
+                if (message.startsWith(leaveCommand.toLowerCase()) && player.hasMetadata("hub-command-plugin-ignore-messages")) {
+                    event.setCancelled(true);
+                    player.removeMetadata("hub-command-plugin-ignore-messages", this);
+                    break;
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        // Vous pouvez laisser cette méthode vide car nous avons enregistré les commandes "/hub" et "/sethub"
+        // avec des CommandExecutor séparés pour les gérer.
+        return false;
+    }
+}
